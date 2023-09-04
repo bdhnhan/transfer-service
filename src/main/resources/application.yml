@@ -1,0 +1,10 @@
+server:
+  port: 8083
+
+external:
+  bank:
+    host: localhost
+    port: 6061
+  zaloWallet:
+    host: localhost
+    port: 6060
