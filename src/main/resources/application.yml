@@ -8,3 +8,10 @@ external:
   zaloWallet:
     host: localhost
     port: 6060
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+  datasource:
+    url: jdbc:mysql://localhost:3306/payment_engine
+    username: root
+    password:
