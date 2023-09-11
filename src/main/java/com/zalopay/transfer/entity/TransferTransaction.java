@@ -1,5 +1,6 @@
 package com.zalopay.transfer.entity;
 
+import com.zalopay.transfer.constants.enums.TransType;
 import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,7 +20,8 @@ public class TransferTransaction {
     @Enumerated(EnumType.STRING)
     private TransactionStatusEnum status;
     private Long amount;
-    private String transType;
+    @Enumerated(EnumType.STRING)
+    private TransType transType;
     private String description = "";
     private Timestamp createdTime;
     private Timestamp updatedTime;

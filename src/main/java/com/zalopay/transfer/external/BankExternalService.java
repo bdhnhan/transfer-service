@@ -2,6 +2,8 @@ package com.zalopay.transfer.external;
 
 import com.bank.protobuf.Bank;
 import com.bank.protobuf.BankServiceGrpc;
+import com.zalopay.transfer.data.BankTransferInfo;
+import com.zalopay.transfer.data.BankTransferInfoResponse;
 import com.zalowallet.protobuf.ZalopayServiceGrpc;
 import com.zalowallet.protobuf.Zalowallet;
 import io.grpc.ManagedChannel;
@@ -17,6 +19,47 @@ public class BankExternalService {
         this.stub = BankServiceGrpc.newBlockingStub(bankChannel);
     }
 
-    public void addMoneyBank() {
+    public BankTransferInfoResponse addMoneyBank(BankTransferInfo bankTransferInfo) {
+        try {
+            Bank.AddMoneyBankResponse response = stub.addMoneyBank(
+                    Bank.AddMoneyBankRequest.newBuilder()
+                            .setAmount(bankTransferInfo.getAmount())
+                            .setNumberAcc(bankTransferInfo.getNumberAccount())
+                            .build()
+            );
+
+            return BankTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Transfer Bank ERROR :: {}", e.getMessage());
+            return BankTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
+    }
+
+    public BankTransferInfoResponse deductMoneyBank(BankTransferInfo bankTransferInfo) {
+        try {
+            Bank.DeductMoneyBankResponse response = stub.deductMoneyBank(
+                    Bank.DeductMoneyBankRequest.newBuilder()
+                            .setAmount(bankTransferInfo.getAmount())
+                            .setNumberAcc(bankTransferInfo.getNumberAccount())
+                            .build()
+            );
+
+            return BankTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Transfer Bank ERROR :: {}", e.getMessage());
+            return BankTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
     }
 }

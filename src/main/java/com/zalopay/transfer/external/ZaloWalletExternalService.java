@@ -1,9 +1,10 @@
 package com.zalopay.transfer.external;
 
+import com.zalopay.transfer.data.WalletTransferInfo;
+import com.zalopay.transfer.data.WalletTransferInfoResponse;
 import com.zalowallet.protobuf.ZalopayServiceGrpc;
 import com.zalowallet.protobuf.Zalowallet;
 import io.grpc.ManagedChannel;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,47 @@ public class ZaloWalletExternalService {
         this.stub = ZalopayServiceGrpc.newBlockingStub(zaloWalletChannel);
     }
 
-    public void addMoneyWallet() {
+    public WalletTransferInfoResponse addMoneyWallet(WalletTransferInfo walletTransferInfo) {
+        try {
+            Zalowallet.AddMoneyWalletResponse response = stub.addMoneyWallet(
+                    Zalowallet.AddMoneyWalletRequest.newBuilder()
+                            .setPhoneNumber(walletTransferInfo.getPhoneNumber())
+                            .setAmount(walletTransferInfo.getAmount())
+                            .build()
+            );
+
+            return WalletTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Transfer Wallet ERROR :: {}", e.getMessage());
+            return WalletTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
+    }
+
+    public WalletTransferInfoResponse deductMoneyWallet(WalletTransferInfo walletTransferInfo) {
+        try {
+            Zalowallet.DeductMoneyWalletResponse response = stub.deductMoneyWallet(
+                    Zalowallet.DeductMoneyWalletRequest.newBuilder()
+                            .setAmount(walletTransferInfo.getAmount())
+                            .setPhoneNumber(walletTransferInfo.getPhoneNumber())
+                            .build()
+            );
+
+            return WalletTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Transfer Wallet ERROR :: {}", e.getMessage());
+            return WalletTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
     }
 }

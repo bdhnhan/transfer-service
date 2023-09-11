@@ -11,7 +11,7 @@ import javax.validation.constraints.NotBlank;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TopUpRequest {
+public class WithdrawRequest {
     @NotBlank(message = "requestId is mandatory")
     private String requestId;
     private Long requestedTime;

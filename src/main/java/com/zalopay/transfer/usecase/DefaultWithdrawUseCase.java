@@ -2,8 +2,10 @@ package com.zalopay.transfer.usecase;
 
 import com.zalopay.transfer.constants.enums.*;
 import com.zalopay.transfer.controller.request.TopUpRequest;
+import com.zalopay.transfer.controller.request.WithdrawRequest;
 import com.zalopay.transfer.controller.response.ResultResponse;
 import com.zalopay.transfer.controller.response.TopUpResponse;
+import com.zalopay.transfer.controller.response.WithdrawResponse;
 import com.zalopay.transfer.entity.TransferInfo;
 import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.listener.event.TransferEvent;
@@ -18,12 +20,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DefaultTopUpUseCase implements TopUpUseCase {
+public class DefaultWithdrawUseCase implements WithdrawUseCase {
 
     private final ApplicationContext context;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -32,10 +37,10 @@ public class DefaultTopUpUseCase implements TopUpUseCase {
 
     @Override
     @Transactional
-    public ResultResponse<TopUpResponse> handle(TopUpRequest request) {
+    public ResultResponse<WithdrawResponse> handle(WithdrawRequest request) {
 
         if (!isValidObjTrans(request.getSourceType()) || !isValidObjTrans(request.getDestType())) {
-            return ResultResponse.<TopUpResponse>builder()
+            return ResultResponse.<WithdrawResponse>builder()
                     .status(ErrorCode.SOURCE_OR_DEST_INVALID.getCode())
                     .messages(Collections.singletonList(ErrorCode.SOURCE_OR_DEST_INVALID.getMessage()))
                     .result(null)
@@ -52,24 +57,24 @@ public class DefaultTopUpUseCase implements TopUpUseCase {
                     this, transferTransaction.getTransId(), transferTransaction.getCreatedTime().getTime()));
 
         } catch (Exception e) {
-            return ResultResponse.<TopUpResponse>builder()
+            return ResultResponse.<WithdrawResponse>builder()
                     .status(ErrorCode.INITIAL_TRANSACTION_FAILED.getCode())
                     .messages(Collections.singletonList(ErrorCode.INITIAL_TRANSACTION_FAILED.getMessage()))
                     .result(null)
                     .build();
         }
 
-        return ResultResponse.<TopUpResponse>builder()
+        return ResultResponse.<WithdrawResponse>builder()
                 .status(ErrorCode.SUCCESSFULLY.getCode())
                 .messages(Collections.singletonList(ErrorCode.SUCCESSFULLY.getMessage()))
-                .result(TopUpResponse.builder()
+                .result(WithdrawResponse.builder()
                         .status(TransactionStatusEnum.INITIAL.name())
                         .transId(transferTransaction.getTransId())
                         .build())
                 .build();
     }
 
-    private List<TransferInfo> initStepTransfer(TransferTransaction transferTransaction, TopUpRequest request) {
+    private List<TransferInfo> initStepTransfer(TransferTransaction transferTransaction, WithdrawRequest request) {
 
         List<TransferInfo> transferInfoList = new ArrayList<>();
         //TODO:: checking promotion, transType fields to add fee or todo something here
@@ -112,14 +117,14 @@ public class DefaultTopUpUseCase implements TopUpUseCase {
         return transferInfoList;
     }
 
-    private TransferTransaction initTransaction(TopUpRequest request) {
+    private TransferTransaction initTransaction(WithdrawRequest request) {
         TransferTransaction transferTransaction = new TransferTransaction();
         transferTransaction.setTransId(UUID.randomUUID().toString());
         transferTransaction.setStatus(TransactionStatusEnum.INITIAL);
         transferTransaction.setAmount(request.getAmount());
         transferTransaction.setCreatedTime(new Timestamp(System.currentTimeMillis()));
         transferTransaction.setUpdatedTime(transferTransaction.getCreatedTime());
-        transferTransaction.setTransType(TransType.TOP_UP);
+        transferTransaction.setTransType(TransType.WITHDRAW);
         return transferTransaction;
     }
 

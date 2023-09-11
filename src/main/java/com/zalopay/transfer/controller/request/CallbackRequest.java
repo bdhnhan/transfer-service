@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CallbackRequest {
+    private String sourceCallBack;
     private String transId;
     private String status;
 }
