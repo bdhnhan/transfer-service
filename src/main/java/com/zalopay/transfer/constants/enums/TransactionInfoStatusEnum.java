@@ -2,8 +2,10 @@ package com.zalopay.transfer.constants.enums;
 
 public enum TransactionInfoStatusEnum {
     INITIAL,
-    SENDING,
+    ROLLBACK,
     PROCESSING,
     FAILED,
-    COMPLETED
+    COMPLETED,
+    REVERTING,
+    REVERT_FAILED
 }

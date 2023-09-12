@@ -4,8 +4,7 @@ import com.bank.protobuf.Bank;
 import com.bank.protobuf.BankServiceGrpc;
 import com.zalopay.transfer.data.BankTransferInfo;
 import com.zalopay.transfer.data.BankTransferInfoResponse;
-import com.zalowallet.protobuf.ZalopayServiceGrpc;
-import com.zalowallet.protobuf.Zalowallet;
+import com.zalopay.transfer.data.RevertTransferInfo;
 import io.grpc.ManagedChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -34,7 +33,7 @@ public class BankExternalService {
                     .build();
 
         } catch (Exception e) {
-            log.error("ERROR : Transfer Bank ERROR :: {}", e.getMessage());
+            log.error("ERROR : Transfer addMoney Bank ERROR :: {}", e.getMessage());
             return BankTransferInfoResponse.builder()
                     .status("FAILED")
                     .build();
@@ -56,7 +55,28 @@ public class BankExternalService {
                     .build();
 
         } catch (Exception e) {
-            log.error("ERROR : Transfer Bank ERROR :: {}", e.getMessage());
+            log.error("ERROR : Transfer deductMoney Bank ERROR :: {}", e.getMessage());
+            return BankTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
+    }
+
+    public BankTransferInfoResponse revertTransaction(RevertTransferInfo bankTransferInfo) {
+        try {
+            Bank.RevertTransferBankResponse response = stub.revertTransferBank(
+                    Bank.RevertTransferBankRequest.newBuilder()
+                            .setTransId(bankTransferInfo.getSubTransId())
+                            .build()
+            );
+
+            return BankTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Revert Bank ERROR :: {}", e.getMessage());
             return BankTransferInfoResponse.builder()
                     .status("FAILED")
                     .build();

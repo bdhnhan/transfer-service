@@ -2,12 +2,12 @@ package com.zalopay.transfer.controller;
 
 import br.com.fluentvalidator.context.Error;
 import br.com.fluentvalidator.context.ValidationResult;
+import com.zalopay.transfer.constants.enums.ErrorCode;
 import com.zalopay.transfer.controller.request.CallbackRequest;
 import com.zalopay.transfer.controller.request.TopUpRequest;
 import com.zalopay.transfer.controller.request.TransferUserRequest;
 import com.zalopay.transfer.controller.request.WithdrawRequest;
 import com.zalopay.transfer.controller.response.*;
-import com.zalopay.transfer.constants.enums.ErrorCode;
 import com.zalopay.transfer.controller.validator.TopUpValidator;
 import com.zalopay.transfer.controller.validator.TransferUserValidator;
 import com.zalopay.transfer.controller.validator.WithdrawValidator;

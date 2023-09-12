@@ -4,13 +4,16 @@ import com.zalopay.transfer.constants.enums.ActivityTypeEnum;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import com.zalopay.transfer.data.BankTransferInfo;
 import com.zalopay.transfer.data.BankTransferInfoResponse;
+import com.zalopay.transfer.data.RevertTransferInfo;
 import com.zalopay.transfer.entity.BankConnect;
 import com.zalopay.transfer.entity.TransferInfo;
 import com.zalopay.transfer.external.BankExternalService;
+import com.zalopay.transfer.listener.event.RollBackEvent;
 import com.zalopay.transfer.repository.BankConnectRepository;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ public class BankHandler implements AbstractHandler {
     private final BankExternalService bankExternalService;
     private final TransferInfoRepository transferInfoRepo;
     private final BankConnectRepository bankConnectRepo;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     @Transactional
@@ -57,9 +61,11 @@ public class BankHandler implements AbstractHandler {
             transferInfo.setSubTransId(bankTransferInfoResponse.getSubTransId());
         } else {
             transferInfo.setStatus(TransactionInfoStatusEnum.FAILED);
+            applicationEventPublisher.publishEvent(new RollBackEvent(this, transferInfo.getTransId(), System.currentTimeMillis()));
         }
     }
 
+    @Transactional
     public void withdrawTrans(TransferInfo transferInfo, BankTransferInfo bankTransferInfo) {
         BankTransferInfoResponse bankTransferInfoResponse = bankExternalService.deductMoneyBank(bankTransferInfo);
         if (bankTransferInfoResponse.getStatus().equals("PROCESSING")) {
@@ -67,11 +73,18 @@ public class BankHandler implements AbstractHandler {
             transferInfo.setSubTransId(bankTransferInfoResponse.getSubTransId());
         } else {
             transferInfo.setStatus(TransactionInfoStatusEnum.FAILED);
+            applicationEventPublisher.publishEvent(new RollBackEvent(this, transferInfo.getTransId(), System.currentTimeMillis()));
         }
     }
 
-    public void revertTrans() {
-
+    @Override
+    public void revertTransaction(TransferInfo transferInfo) {
+        RevertTransferInfo revertTransferInfo = RevertTransferInfo.builder().subTransId(transferInfo.getSubTransId()).build();
+        BankTransferInfoResponse bankTransferInfoResponse = bankExternalService.revertTransaction(revertTransferInfo);
+        if (bankTransferInfoResponse.getStatus().equals("PROCESSING")) {
+            transferInfo.setStatus(TransactionInfoStatusEnum.REVERTING);
+            transferInfoRepo.save(transferInfo);
+        }
     }
 
     public void getStatusSubTrans() {

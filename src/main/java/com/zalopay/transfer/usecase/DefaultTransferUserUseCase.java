@@ -2,15 +2,14 @@ package com.zalopay.transfer.usecase;
 
 import com.zalopay.transfer.constants.enums.*;
 import com.zalopay.transfer.controller.request.TransferUserRequest;
-import com.zalopay.transfer.controller.request.WithdrawRequest;
 import com.zalopay.transfer.controller.response.ResultResponse;
 import com.zalopay.transfer.controller.response.TransferUserResponse;
-import com.zalopay.transfer.controller.response.WithdrawResponse;
 import com.zalopay.transfer.entity.TransferInfo;
 import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.listener.event.TransferEvent;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
+import com.zalopay.transfer.utils.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.EnumUtils;
@@ -23,7 +22,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -83,7 +81,7 @@ public class DefaultTransferUserUseCase implements TransferUserUseCase {
         transferInfoList.add(
                 TransferInfo.builder()
                         .step(1)
-                        .id(UUID.randomUUID().toString())
+                        .id(Snowflake.generateID())
                         .transId(transferTransaction.getTransId())
                         .userId(request.getUserId())
                         .amount(request.getAmount())
@@ -100,7 +98,7 @@ public class DefaultTransferUserUseCase implements TransferUserUseCase {
         transferInfoList.add(
                 TransferInfo.builder()
                         .step(2)
-                        .id(UUID.randomUUID().toString())
+                        .id(Snowflake.generateID())
                         .transId(transferTransaction.getTransId())
                         .userId(request.getUserId())
                         .amount(request.getAmount())
@@ -119,7 +117,7 @@ public class DefaultTransferUserUseCase implements TransferUserUseCase {
 
     private TransferTransaction initTransaction(TransferUserRequest request) {
         TransferTransaction transferTransaction = new TransferTransaction();
-        transferTransaction.setTransId(UUID.randomUUID().toString());
+        transferTransaction.setTransId(Snowflake.generateID());
         transferTransaction.setStatus(TransactionStatusEnum.INITIAL);
         transferTransaction.setAmount(request.getAmount());
         transferTransaction.setCreatedTime(new Timestamp(System.currentTimeMillis()));

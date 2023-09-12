@@ -1,26 +1,25 @@
 package com.zalopay.transfer.usecase;
 
-import com.google.gson.Gson;
-import com.zalopay.transfer.constants.Constant;
-import com.zalopay.transfer.constants.enums.*;
+import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
+import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import com.zalopay.transfer.controller.request.CallbackRequest;
 import com.zalopay.transfer.controller.response.CallbackResponse;
 import com.zalopay.transfer.controller.response.ResultResponse;
 import com.zalopay.transfer.entity.TransferInfo;
 import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.handler.AbstractHandler;
-import com.zalopay.transfer.listener.event.TransferEventData;
+import com.zalopay.transfer.listener.event.RollBackEvent;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -29,8 +28,8 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
 
     private final TransferInfoRepository transferInfoRepo;
     private final TransferTransactionRepository transferTransactionRepo;
-    private final KafkaTemplate<String, String> kafkaTemplate;
     private final ApplicationContext applicationContext;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     @Transactional
@@ -38,14 +37,24 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
         Optional<TransferInfo> transferInfoOpt = transferInfoRepo.findBySubTransId(request.getTransId());
         if (transferInfoOpt.isPresent()) {
             transferInfoOpt.get().setUpdatedTime(new Timestamp(System.currentTimeMillis()));
-            if (request.getStatus().equals(TransactionInfoStatusEnum.COMPLETED.name())) {
-                transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.COMPLETED);
-                transferInfoRepo.save(transferInfoOpt.get());
-                processNextStep(transferInfoOpt.get().getTransId());
+            if (transferInfoOpt.get().getStatus().equals(TransactionInfoStatusEnum.REVERTING)) {
+                if (request.getStatus().equals(TransactionInfoStatusEnum.COMPLETED.name())) {
+                    transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.ROLLBACK);
+                    transferInfoRepo.save(transferInfoOpt.get());
+                } else {
+                    transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.REVERT_FAILED);
+                    transferInfoRepo.save(transferInfoOpt.get());
+                }
             } else {
-                transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.FAILED);
-                transferInfoRepo.save(transferInfoOpt.get());
-                rollbackTransaction(transferInfoOpt.get().getTransId());
+                if (request.getStatus().equals(TransactionInfoStatusEnum.COMPLETED.name())) {
+                    transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.COMPLETED);
+                    transferInfoRepo.save(transferInfoOpt.get());
+                    processNextStep(transferInfoOpt.get().getTransId());
+                } else {
+                    transferInfoOpt.get().setStatus(TransactionInfoStatusEnum.FAILED);
+                    transferInfoRepo.save(transferInfoOpt.get());
+                    rollbackTransaction(transferInfoOpt.get().getTransId());
+                }
             }
         }
 
@@ -59,10 +68,7 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
 
     @Transactional
     public void rollbackTransaction(String transId) {
-        kafkaTemplate.send(
-                Constant.Kafka.ROLL_BACK_STEPS_TOPIC,
-                new Gson().toJson(new TransferEventData(transId, System.currentTimeMillis()))
-        );
+        applicationEventPublisher.publishEvent(new RollBackEvent(this, transId, System.currentTimeMillis()));
     }
     @Transactional
     public void processNextStep(String transId) {

@@ -1,3 +1,6 @@
+machine:
+  id: 1000
+
 server:
   port: 8083
 

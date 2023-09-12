@@ -1,5 +1,6 @@
 package com.zalopay.transfer.external;
 
+import com.zalopay.transfer.data.RevertTransferInfo;
 import com.zalopay.transfer.data.WalletTransferInfo;
 import com.zalopay.transfer.data.WalletTransferInfoResponse;
 import com.zalowallet.protobuf.ZalopayServiceGrpc;
@@ -55,6 +56,27 @@ public class ZaloWalletExternalService {
 
         } catch (Exception e) {
             log.error("ERROR : Transfer Wallet ERROR :: {}", e.getMessage());
+            return WalletTransferInfoResponse.builder()
+                    .status("FAILED")
+                    .build();
+        }
+    }
+
+    public WalletTransferInfoResponse revertTransaction(RevertTransferInfo bankTransferInfo) {
+        try {
+            Zalowallet.RevertTransferWalletResponse response = stub.revertTransferWallet(
+                    Zalowallet.RevertTransferWalletRequest.newBuilder()
+                            .setTransId(bankTransferInfo.getSubTransId())
+                            .build()
+            );
+
+            return WalletTransferInfoResponse.builder()
+                    .subTransId(response.getResult().getTransId())
+                    .status(response.getResult().getStatus())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ERROR : Revert Wallet ERROR :: {}", e.getMessage());
             return WalletTransferInfoResponse.builder()
                     .status("FAILED")
                     .build();
