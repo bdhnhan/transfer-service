@@ -28,7 +28,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultTransferUserUseCase implements TransferUserUseCase {
 
-    private final ApplicationContext context;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final TransferTransactionRepository transactionRepo;
     private final TransferInfoRepository transferInfoRepo;
@@ -36,15 +35,6 @@ public class DefaultTransferUserUseCase implements TransferUserUseCase {
     @Override
     @Transactional
     public ResultResponse<TransferUserResponse> handle(TransferUserRequest request) {
-
-        if (!isValidObjTrans(request.getSourceType()) || !isValidObjTrans(request.getDestType())) {
-            return ResultResponse.<TransferUserResponse>builder()
-                    .status(ErrorCode.SOURCE_OR_DEST_INVALID.getCode())
-                    .messages(Collections.singletonList(ErrorCode.SOURCE_OR_DEST_INVALID.getMessage()))
-                    .result(null)
-                    .build();
-        }
-
         TransferTransaction transferTransaction = initTransaction(request);
         List<TransferInfo> transferInfoList = initStepTransfer(transferTransaction, request);
         try {
@@ -122,12 +112,7 @@ public class DefaultTransferUserUseCase implements TransferUserUseCase {
         transferTransaction.setAmount(request.getAmount());
         transferTransaction.setCreatedTime(new Timestamp(System.currentTimeMillis()));
         transferTransaction.setUpdatedTime(transferTransaction.getCreatedTime());
-        transferTransaction.setTransType(TransType.WITHDRAW);
+        transferTransaction.setTransType(TransType.TRANSFER);
         return transferTransaction;
     }
-
-    private boolean isValidObjTrans(String trans) {
-        return EnumUtils.isValidEnum(ObjectTransactionEnum.class, trans);
-    }
-
 }

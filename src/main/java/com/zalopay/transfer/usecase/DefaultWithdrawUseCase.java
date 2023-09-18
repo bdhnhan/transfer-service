@@ -28,7 +28,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultWithdrawUseCase implements WithdrawUseCase {
 
-    private final ApplicationContext context;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final TransferTransactionRepository transactionRepo;
     private final TransferInfoRepository transferInfoRepo;
@@ -36,14 +35,6 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
     @Override
     @Transactional
     public ResultResponse<WithdrawResponse> handle(WithdrawRequest request) {
-
-        if (!isValidObjTrans(request.getSourceType()) || !isValidObjTrans(request.getDestType())) {
-            return ResultResponse.<WithdrawResponse>builder()
-                    .status(ErrorCode.SOURCE_OR_DEST_INVALID.getCode())
-                    .messages(Collections.singletonList(ErrorCode.SOURCE_OR_DEST_INVALID.getMessage()))
-                    .result(null)
-                    .build();
-        }
 
         TransferTransaction transferTransaction = initTransaction(request);
         List<TransferInfo> transferInfoList = initStepTransfer(transferTransaction, request);
@@ -125,9 +116,4 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
         transferTransaction.setTransType(TransType.WITHDRAW);
         return transferTransaction;
     }
-
-    private boolean isValidObjTrans(String trans) {
-        return EnumUtils.isValidEnum(ObjectTransactionEnum.class, trans);
-    }
-
 }

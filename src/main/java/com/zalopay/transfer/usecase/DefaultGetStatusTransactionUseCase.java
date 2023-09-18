@@ -1,24 +1,18 @@
 package com.zalopay.transfer.usecase;
 
-import com.zalopay.transfer.constants.enums.*;
-import com.zalopay.transfer.controller.request.TopUpRequest;
+import com.zalopay.transfer.constants.enums.ErrorCode;
 import com.zalopay.transfer.controller.response.ResultResponse;
-import com.zalopay.transfer.controller.response.TopUpResponse;
-import com.zalopay.transfer.entity.TransferInfo;
 import com.zalopay.transfer.entity.TransferTransaction;
-import com.zalopay.transfer.listener.event.TransferEvent;
-import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.EnumUtils;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationEventPublisher;
+import org.apache.logging.log4j.util.Strings;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
-import java.util.*;
+import java.util.Collections;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -26,11 +20,21 @@ import java.util.*;
 public class DefaultGetStatusTransactionUseCase implements GetStatusTransactionUseCase {
 
     private final TransferTransactionRepository transactionRepo;
+    private final RedissonClient redissonClient;
 
     @Override
     @Transactional
     public ResultResponse<String> handle(String request) {
 
+        String transactionStatus = (String) redissonClient.getMapCache("transId").get(request);
+        if (!Strings.isEmpty(transactionStatus)) {
+            log.info("Get status from Redis transId [{}] status [{}]", request, transactionStatus);
+            return ResultResponse.<String>builder()
+                    .status(ErrorCode.SUCCESSFULLY.getCode())
+                    .messages(Collections.singletonList(ErrorCode.SUCCESSFULLY.getMessage()))
+                    .result(transactionStatus)
+                    .build();
+        }
         Optional<TransferTransaction> transferTransactionOptional = transactionRepo.findById(request);
         if (transferTransactionOptional.isPresent()) {
             return ResultResponse.<String>builder()

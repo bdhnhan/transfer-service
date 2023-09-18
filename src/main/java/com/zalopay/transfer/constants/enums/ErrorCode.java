@@ -5,7 +5,8 @@ public enum ErrorCode {
     SOURCE_OR_DEST_INVALID(601, "Source or destination to transfer invalid"),
     INITIAL_TRANSACTION_FAILED(602, "Transaction initial failed"),
     SUCCESSFULLY(200, "API handle completed"),
-    HANDLE_API_FAILED(603, "Can not handle with this request");
+    HANDLE_API_FAILED(603, "Can not handle with this request"),
+    TRANS_ID_IS_NOT_FOUND(604, "TransId can not found");
 
     private final int code;
     private final String message;

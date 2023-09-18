@@ -13,7 +13,6 @@ import com.zalopay.transfer.utils.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.EnumUtils;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultTopUpUseCase implements TopUpUseCase {
 
-    private final ApplicationContext context;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final TransferTransactionRepository transactionRepo;
     private final TransferInfoRepository transferInfoRepo;
@@ -36,14 +34,6 @@ public class DefaultTopUpUseCase implements TopUpUseCase {
     @Override
     @Transactional
     public ResultResponse<TopUpResponse> handle(TopUpRequest request) {
-
-        if (!isValidObjTrans(request.getSourceType()) || !isValidObjTrans(request.getDestType())) {
-            return ResultResponse.<TopUpResponse>builder()
-                    .status(ErrorCode.SOURCE_OR_DEST_INVALID.getCode())
-                    .messages(Collections.singletonList(ErrorCode.SOURCE_OR_DEST_INVALID.getMessage()))
-                    .result(null)
-                    .build();
-        }
 
         TransferTransaction transferTransaction = initTransaction(request);
         List<TransferInfo> transferInfoList = initStepTransfer(transferTransaction, request);
@@ -125,9 +115,4 @@ public class DefaultTopUpUseCase implements TopUpUseCase {
         transferTransaction.setTransType(TransType.TOP_UP);
         return transferTransaction;
     }
-
-    private boolean isValidObjTrans(String trans) {
-        return EnumUtils.isValidEnum(ObjectTransactionEnum.class, trans);
-    }
-
 }

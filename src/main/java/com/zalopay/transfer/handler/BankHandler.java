@@ -83,11 +83,9 @@ public class BankHandler implements AbstractHandler {
         BankTransferInfoResponse bankTransferInfoResponse = bankExternalService.revertTransaction(revertTransferInfo);
         if (bankTransferInfoResponse.getStatus().equals("PROCESSING")) {
             transferInfo.setStatus(TransactionInfoStatusEnum.REVERTING);
-            transferInfoRepo.save(transferInfo);
+        } else {
+            transferInfo.setStatus(TransactionInfoStatusEnum.REVERT_FAILED);
         }
-    }
-
-    public void getStatusSubTrans() {
-
+        transferInfoRepo.save(transferInfo);
     }
 }

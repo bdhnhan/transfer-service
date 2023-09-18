@@ -32,9 +32,6 @@ public class TopUpRequest {
     private String destId;
     @NotBlank(message = "destReceiver is mandatory")
     private String destReceiver;
-
-    @NotBlank(message = "transType is mandatory")
-    private String transType;
     private String promotion;
 
     @NotBlank(message = "amount is mandatory")

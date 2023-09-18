@@ -12,6 +12,7 @@ import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.context.ApplicationContext;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -29,6 +31,8 @@ public class RollBackRequestedConsumer {
     private final ApplicationContext applicationContext;
     private final TransferTransactionRepository transferTransactionRepo;
     private final TransferInfoRepository transferInfoRepo;
+    private final RedissonClient redissonClient;
+
     @KafkaListener(
             topics = Constant.Kafka.ROLL_BACK_STEPS_TOPIC,
             groupId = "groupId"
@@ -44,13 +48,10 @@ public class RollBackRequestedConsumer {
             transferTransaction.setStatus(TransactionStatusEnum.FAILED);
             transferTransaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
             transferTransactionRepo.save(transferTransaction);
+            redissonClient.getMapCache("transId")
+                    .put(data.getTransactionId(), TransactionStatusEnum.FAILED.name(),1, TimeUnit.MINUTES);
             rollbackSteps(transferTransaction.getTransId());
         }
-        transferTransactionOptional.ifPresent(transferTransaction -> {
-            transferTransaction.setStatus(TransactionStatusEnum.FAILED);
-            transferTransaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
-            transferTransactionRepo.save(transferTransaction);
-        });
     }
 
     public void rollbackSteps(String transId) {

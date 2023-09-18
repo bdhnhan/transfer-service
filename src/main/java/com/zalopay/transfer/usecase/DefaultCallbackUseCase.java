@@ -1,5 +1,6 @@
 package com.zalopay.transfer.usecase;
 
+import com.zalopay.transfer.constants.enums.ErrorCode;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import com.zalopay.transfer.controller.request.CallbackRequest;
@@ -13,6 +14,7 @@ import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -30,6 +33,7 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
     private final TransferTransactionRepository transferTransactionRepo;
     private final ApplicationContext applicationContext;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final RedissonClient redissonClient;
 
     @Override
     @Transactional
@@ -56,14 +60,20 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
                     rollbackTransaction(transferInfoOpt.get().getTransId());
                 }
             }
+            return ResultResponse.<CallbackResponse>builder()
+                    .status(ErrorCode.SUCCESSFULLY.getCode())
+                    .result(CallbackResponse.builder()
+                            .status(ErrorCode.SUCCESSFULLY.name())
+                            .build())
+                    .build();
+        } else {
+            return ResultResponse.<CallbackResponse>builder()
+                    .status(ErrorCode.TRANS_ID_IS_NOT_FOUND.getCode())
+                    .result(CallbackResponse.builder()
+                            .status(ErrorCode.TRANS_ID_IS_NOT_FOUND.name())
+                            .build())
+                    .build();
         }
-
-        return ResultResponse.<CallbackResponse>builder()
-                .status(200)
-                .result(CallbackResponse.builder()
-                        .status("SUCCESSFULLY")
-                        .build())
-                .build();
     }
 
     @Transactional
@@ -82,6 +92,7 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
             transferTransactionOptional.ifPresent(transferTransaction -> {
                 transferTransaction.setStatus(TransactionStatusEnum.COMPLETED);
                 transferTransactionRepo.save(transferTransaction);
+                redissonClient.getMapCache("transId").put(transferTransaction.getTransId(), TransactionStatusEnum.COMPLETED.name(),1, TimeUnit.MINUTES);
             });
         });
     }

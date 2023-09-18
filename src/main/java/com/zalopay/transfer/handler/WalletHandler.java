@@ -74,11 +74,9 @@ public class WalletHandler implements AbstractHandler {
         WalletTransferInfoResponse walletTransferInfoResponse = zaloWalletExternalService.revertTransaction(revertTransferInfo);
         if (walletTransferInfoResponse.getStatus().equals("PROCESSING")) {
             transferInfo.setStatus(TransactionInfoStatusEnum.REVERTING);
-            transferInfoRepo.save(transferInfo);
+        } else {
+            transferInfo.setStatus(TransactionInfoStatusEnum.REVERT_FAILED);
         }
-    }
-
-    public void getStatusSubTrans() {
-
+        transferInfoRepo.save(transferInfo);
     }
 }

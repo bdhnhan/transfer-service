@@ -11,12 +11,14 @@ import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.context.ApplicationContext;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -26,9 +28,11 @@ public class TransferRequestedConsumer {
     private final ApplicationContext applicationContext;
     private final TransferTransactionRepository transferTransactionRepo;
     private final TransferInfoRepository transferInfoRepo;
+    private final RedissonClient redissonClient;
     @KafkaListener(
             topics = Constant.Kafka.TRANSFER_TOPIC,
-            groupId = "groupId"
+            groupId = "groupId",
+            concurrency = "8"
     )
     public void handle(String messageData) {
         TransferEventData data = new Gson().fromJson(messageData, TransferEventData.class);
@@ -39,6 +43,8 @@ public class TransferRequestedConsumer {
             transferTransaction.setStatus(TransactionStatusEnum.PROCESSING);
             transferTransaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
             transferTransactionRepo.save(transferTransaction);
+            redissonClient.getMapCache("transId")
+                    .put(transferTransaction.getTransId(), TransactionStatusEnum.PROCESSING.name(),1, TimeUnit.MINUTES);
         });
         Optional<TransferInfo> transferInfoOptional = transferInfoRepo.findByTransIdAndStep(data.getTransactionId(), 1);
         transferInfoOptional.ifPresent(transferInfo -> {
