@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.zalopay.transfer.constants.Constant;
 import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.handler.AbstractHandler;
 import com.zalopay.transfer.listener.event.TransferEventData;
 import com.zalopay.transfer.repository.TransferInfoRepository;
@@ -38,13 +38,13 @@ public class TransferRequestedConsumer {
         TransferEventData data = new Gson().fromJson(messageData, TransferEventData.class);
         log.info("Listen from topic transfer-topic with data :: {}", data.getTransactionId());
 
-        Optional<TransferTransaction> transferTransactionOptional = transferTransactionRepo.findById(data.getTransactionId());
+        Optional<Transaction> transferTransactionOptional = transferTransactionRepo.findById(data.getTransactionId());
         transferTransactionOptional.ifPresent(transferTransaction -> {
             transferTransaction.setStatus(TransactionStatusEnum.PROCESSING);
             transferTransaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
             transferTransactionRepo.save(transferTransaction);
             redissonClient.getMapCache("transId")
-                    .put(transferTransaction.getTransId(), TransactionStatusEnum.PROCESSING.name(),1, TimeUnit.MINUTES);
+                    .put(transferTransaction.getId(), TransactionStatusEnum.PROCESSING.name(),1, TimeUnit.MINUTES);
         });
         Optional<TransferInfo> transferInfoOptional = transferInfoRepo.findByTransIdAndStep(data.getTransactionId(), 1);
         transferInfoOptional.ifPresent(transferInfo -> {

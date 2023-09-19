@@ -2,7 +2,7 @@ package com.zalopay.transfer.usecase;
 
 import com.zalopay.transfer.constants.enums.ErrorCode;
 import com.zalopay.transfer.controller.response.ResultResponse;
-import com.zalopay.transfer.entity.TransferTransaction;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,7 @@ public class DefaultGetStatusTransactionUseCase implements GetStatusTransactionU
                     .result(transactionStatus)
                     .build();
         }
-        Optional<TransferTransaction> transferTransactionOptional = transactionRepo.findById(request);
+        Optional<Transaction> transferTransactionOptional = transactionRepo.findById(request);
         if (transferTransactionOptional.isPresent()) {
             return ResultResponse.<String>builder()
                     .status(ErrorCode.SUCCESSFULLY.getCode())

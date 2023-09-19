@@ -2,8 +2,8 @@ package com.zalopay.transfer.listener;
 
 import com.google.gson.Gson;
 import com.zalopay.transfer.constants.enums.*;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.handler.AbstractHandler;
 import com.zalopay.transfer.handler.BankHandler;
 import com.zalopay.transfer.handler.WalletHandler;
@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 @ExtendWith(SpringExtension.class)
 class TransferRequestedConsumerTest {
@@ -45,7 +44,7 @@ class TransferRequestedConsumerTest {
     private static RedissonClient redissonClient;
     private TransferRequestedConsumer transferRequestedConsumer;
 
-    private Map<String, TransferTransaction> transactionMap = new HashMap<>();
+    private Map<String, Transaction> transactionMap = new HashMap<>();
     private Map<String, TransferInfo> transferInfoMap = new HashMap<>();
     private final String transactionId = Snowflake.generateID();
     private final String firstSubTransId = Snowflake.generateID();
@@ -73,10 +72,10 @@ class TransferRequestedConsumerTest {
                         transactionMap.getOrDefault((String) invocationOnMock.getArgument(0), null)))
                 .when(transferTransactionRepo).findById(Mockito.anyString());
 
-        AtomicReference<TransferTransaction> transactionAtomicReference = new AtomicReference<>();
+        AtomicReference<Transaction> transactionAtomicReference = new AtomicReference<>();
         Mockito.doAnswer(invocationOnMock -> {
             transactionAtomicReference.set(invocationOnMock.getArgument(0));
-            transactionMap.put(transactionAtomicReference.get().getTransId(), transactionAtomicReference.get());
+            transactionMap.put(transactionAtomicReference.get().getId(), transactionAtomicReference.get());
             return transactionAtomicReference.get();
         }).when(transferTransactionRepo).save(Mockito.any());
 
@@ -109,7 +108,7 @@ class TransferRequestedConsumerTest {
         String messageTransfer = new Gson().toJson(new TransferEventData(transactionId, System.currentTimeMillis()));
         transferRequestedConsumer.handle(messageTransfer);
 
-        Mockito.verify(transferTransactionRepo, Mockito.times(1)).save(Mockito.any(TransferTransaction.class));
+        Mockito.verify(transferTransactionRepo, Mockito.times(1)).save(Mockito.any(Transaction.class));
         Mockito.verify(transferTransactionRepo, Mockito.times(1)).findById(transactionId);
         Mockito.verify(transferInfoRepo, Mockito.times(1)).findByTransIdAndStep(transactionId, 1);
         Mockito.verify(applicationContext, Mockito.times(1)).getBean(Mockito.anyString());
@@ -120,13 +119,14 @@ class TransferRequestedConsumerTest {
         Assertions.assertInstanceOf(BankHandler.class, abstractHandler);
     }
 
-    private TransferTransaction initTransferTransaction(String transactionId) {
-        return new TransferTransaction(
+    private Transaction initTransferTransaction(String transactionId) {
+        return new Transaction(
                 transactionId,
                 TransactionStatusEnum.INITIAL,
                 amount,
                 TransType.TOP_UP,
                 "",
+                UUID.randomUUID().toString(),
                 new Timestamp(System.currentTimeMillis() - 100_000L),
                 new Timestamp(System.currentTimeMillis()));
     }
@@ -142,14 +142,13 @@ class TransferRequestedConsumerTest {
                         .step(1)
                         .id(first)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.INITIAL)
                         .sourceType(ObjectTransactionEnum.BANK_ACCOUNT)
                         .sourceTransferId("BANK_VCB")
                         .userSourceId(userId)
-                        .activityType(ActivityTypeEnum.DEDUCT)
-                        .subTransId(firstSubTransId)
+                        .actionType(ActionTypeEnum.DEDUCT)
+                        .stepId(firstSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -159,14 +158,13 @@ class TransferRequestedConsumerTest {
                         .step(2)
                         .id(second)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.INITIAL)
                         .sourceType(ObjectTransactionEnum.WALLET)
                         .userSourceId("ZLP_WALLET")
                         .sourceTransferId("0918340208")
-                        .activityType(ActivityTypeEnum.ADD)
-                        .subTransId(secondSubTransId)
+                        .actionType(ActionTypeEnum.ADD)
+                        .stepId(secondSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()

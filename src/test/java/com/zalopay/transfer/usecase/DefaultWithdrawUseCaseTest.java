@@ -4,8 +4,8 @@ import com.zalopay.transfer.constants.enums.*;
 import com.zalopay.transfer.controller.request.WithdrawRequest;
 import com.zalopay.transfer.controller.response.ResultResponse;
 import com.zalopay.transfer.controller.response.WithdrawResponse;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.listener.event.TransferEvent;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
@@ -44,15 +44,15 @@ public class DefaultWithdrawUseCaseTest {
     @InjectMocks
     private DefaultWithdrawUseCase withdrawUseCase;
 
-    private Map<String, TransferTransaction> transactionMap = new HashMap<>();
+    private Map<String, Transaction> transactionMap = new HashMap<>();
     private Map<String, TransferInfo> infoMap = new HashMap<>();
     private Map<String, TransferEvent> eventMap = new HashMap<>();
     @BeforeEach
     public void initMock() {
-        AtomicReference<TransferTransaction> transactionAtomicReference = new AtomicReference<>();
-        Mockito.doAnswer((Answer<TransferTransaction>) invocation -> {
+        AtomicReference<Transaction> transactionAtomicReference = new AtomicReference<>();
+        Mockito.doAnswer((Answer<Transaction>) invocation -> {
             transactionAtomicReference.set(invocation.getArgument(0));
-            transactionMap.put(transactionAtomicReference.get().getTransId(), transactionAtomicReference.get());
+            transactionMap.put(transactionAtomicReference.get().getId(), transactionAtomicReference.get());
             return transactionAtomicReference.get();
         }).when(transferTransactionRepository).save(Mockito.any());
 
@@ -99,15 +99,15 @@ public class DefaultWithdrawUseCaseTest {
         assertEquals(2, infoMap.size());
         assertNotNull(response);
 
-        TransferTransaction transferTransaction = new ArrayList<>(transactionMap.values()).get(0);
-        assertEquals(eventMap.get(transferTransaction.getTransId()).getCreatedTime(), transferTransaction.getCreatedTime().getTime());
-        assertEquals(request.getAmount(), transferTransaction.getAmount());
-        assertEquals(TransType.WITHDRAW, transferTransaction.getTransType());
-        assertEquals(TransactionStatusEnum.INITIAL, transferTransaction.getStatus());
+        Transaction transaction = new ArrayList<>(transactionMap.values()).get(0);
+        assertEquals(eventMap.get(transaction.getId()).getCreatedTime(), transaction.getCreatedTime().getTime());
+        assertEquals(request.getAmount(), transaction.getAmount());
+        assertEquals(TransType.WITHDRAW, transaction.getTransType());
+        assertEquals(TransactionStatusEnum.INITIAL, transaction.getStatus());
 
         for (TransferInfo transferInfo : infoMap.values()) {
             assertNotNull(transferInfo);
-            assertEquals(transferInfo.getTransId(), transferTransaction.getTransId());
+            assertEquals(transferInfo.getTransId(), transaction.getId());
             assertEquals(request.getAmount(), transferInfo.getAmount());
             assertEquals(TransactionInfoStatusEnum.INITIAL, transferInfo.getStatus());
         }

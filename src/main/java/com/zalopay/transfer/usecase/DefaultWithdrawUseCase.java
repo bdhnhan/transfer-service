@@ -4,16 +4,14 @@ import com.zalopay.transfer.constants.enums.*;
 import com.zalopay.transfer.controller.request.WithdrawRequest;
 import com.zalopay.transfer.controller.response.ResultResponse;
 import com.zalopay.transfer.controller.response.WithdrawResponse;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.listener.event.TransferEvent;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import com.zalopay.transfer.utils.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.EnumUtils;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,14 +34,14 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
     @Transactional
     public ResultResponse<WithdrawResponse> handle(WithdrawRequest request) {
 
-        TransferTransaction transferTransaction = initTransaction(request);
-        List<TransferInfo> transferInfoList = initStepTransfer(transferTransaction, request);
+        Transaction transaction = initTransaction(request);
+        List<TransferInfo> transferInfoList = initStepTransfer(transaction, request);
         try {
-            transactionRepo.save(transferTransaction);
+            transactionRepo.save(transaction);
             transferInfoRepo.saveAll(transferInfoList);
 
             applicationEventPublisher.publishEvent(new TransferEvent(
-                    this, transferTransaction.getTransId(), transferTransaction.getCreatedTime().getTime()));
+                    this, transaction.getId(), transaction.getCreatedTime().getTime()));
 
         } catch (Exception e) {
             return ResultResponse.<WithdrawResponse>builder()
@@ -58,12 +56,12 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
                 .messages(Collections.singletonList(ErrorCode.SUCCESSFULLY.getMessage()))
                 .result(WithdrawResponse.builder()
                         .status(TransactionStatusEnum.INITIAL.name())
-                        .transId(transferTransaction.getTransId())
+                        .transId(transaction.getId())
                         .build())
                 .build();
     }
 
-    private List<TransferInfo> initStepTransfer(TransferTransaction transferTransaction, WithdrawRequest request) {
+    private List<TransferInfo> initStepTransfer(Transaction transaction, WithdrawRequest request) {
 
         List<TransferInfo> transferInfoList = new ArrayList<>();
         //TODO:: checking promotion, transType fields to add fee or todo something here
@@ -73,15 +71,14 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
                 TransferInfo.builder()
                         .step(1)
                         .id(Snowflake.generateID())
-                        .transId(transferTransaction.getTransId())
-                        .userId(request.getUserId())
+                        .transId(transaction.getId())
                         .amount(request.getAmount())
                         .status(TransactionInfoStatusEnum.INITIAL)
                         .sourceType(ObjectTransactionEnum.valueOf(request.getSourceType()))
                         .sourceTransferId(request.getSourceId())
                         .userSourceId(request.getSourceSender())
-                        .activityType(ActivityTypeEnum.DEDUCT)
-                        .subTransId(null)
+                        .actionType(ActionTypeEnum.DEDUCT)
+                        .stepId(null)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -90,15 +87,14 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
                 TransferInfo.builder()
                         .step(2)
                         .id(Snowflake.generateID())
-                        .transId(transferTransaction.getTransId())
-                        .userId(request.getUserId())
+                        .transId(transaction.getId())
                         .amount(request.getAmount())
                         .status(TransactionInfoStatusEnum.INITIAL)
                         .sourceType(ObjectTransactionEnum.valueOf(request.getDestType()))
                         .userSourceId(request.getDestReceiver())
                         .sourceTransferId(request.getDestId())
-                        .activityType(ActivityTypeEnum.ADD)
-                        .subTransId(null)
+                        .actionType(ActionTypeEnum.ADD)
+                        .stepId(null)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -106,14 +102,15 @@ public class DefaultWithdrawUseCase implements WithdrawUseCase {
         return transferInfoList;
     }
 
-    private TransferTransaction initTransaction(WithdrawRequest request) {
-        TransferTransaction transferTransaction = new TransferTransaction();
-        transferTransaction.setTransId(Snowflake.generateID());
-        transferTransaction.setStatus(TransactionStatusEnum.INITIAL);
-        transferTransaction.setAmount(request.getAmount());
-        transferTransaction.setCreatedTime(new Timestamp(System.currentTimeMillis()));
-        transferTransaction.setUpdatedTime(transferTransaction.getCreatedTime());
-        transferTransaction.setTransType(TransType.WITHDRAW);
-        return transferTransaction;
+    private Transaction initTransaction(WithdrawRequest request) {
+        Transaction transaction = new Transaction();
+        transaction.setId(Snowflake.generateID());
+        transaction.setStatus(TransactionStatusEnum.INITIAL);
+        transaction.setAmount(request.getAmount());
+        transaction.setCreatedTime(new Timestamp(System.currentTimeMillis()));
+        transaction.setUpdatedTime(transaction.getCreatedTime());
+        transaction.setTransType(TransType.WITHDRAW);
+        transaction.setUserId(request.getUserId());
+        return transaction;
     }
 }

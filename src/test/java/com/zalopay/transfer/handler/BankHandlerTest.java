@@ -1,9 +1,8 @@
 package com.zalopay.transfer.handler;
 
-import com.zalopay.transfer.constants.enums.ActivityTypeEnum;
+import com.zalopay.transfer.constants.enums.ActionTypeEnum;
 import com.zalopay.transfer.constants.enums.ObjectTransactionEnum;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
-import com.zalopay.transfer.data.BankTransferInfo;
 import com.zalopay.transfer.data.BankTransferInfoResponse;
 import com.zalopay.transfer.entity.BankConnect;
 import com.zalopay.transfer.entity.TransferInfo;
@@ -22,9 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.sql.Timestamp;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
@@ -110,65 +107,65 @@ public class BankHandlerTest {
     public void TestTopUpTransferLossConnectDBExpectExceptionShouldBeOk() {
         lossConnectBank = false;
         lossConnectDB = true;
-        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         bankHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestTopUpTransferShouldBeOk() {
         lossConnectBank = false;
         lossConnectDB = false;
-        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         bankHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.PROCESSING, transferInfo.getStatus());
-        Assertions.assertNotNull(transferInfo.getSubTransId());
+        Assertions.assertNotNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestTopUpTransferLossConnectBankShouldBeOk() {
         lossConnectBank = true;
         lossConnectDB = false;
-        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         bankHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(1)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestWithdrawTransferShouldBeOk() {
         lossConnectBank = false;
         lossConnectDB = false;
-        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.DEDUCT, null);
+        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.DEDUCT, null);
         bankHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.PROCESSING, transferInfo.getStatus());
-        Assertions.assertNotNull(transferInfo.getSubTransId());
+        Assertions.assertNotNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestWithdrawTransferLossConnectBankShouldBeOk() {
         lossConnectBank = true;
         lossConnectDB = false;
-        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.DEDUCT, null);
+        transferInfo = initTransferInfoWithStatusActionSubtransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.DEDUCT, null);
         bankHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(1)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
@@ -176,7 +173,7 @@ public class BankHandlerTest {
         lossConnectBank = false;
         lossConnectDB = false;
         transferInfo = initTransferInfoWithStatusActionSubtransId(
-                TransactionInfoStatusEnum.COMPLETED, ActivityTypeEnum.ADD, UUID.randomUUID().toString());
+                TransactionInfoStatusEnum.COMPLETED, ActionTypeEnum.ADD, UUID.randomUUID().toString());
         bankHandler.revertTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
@@ -188,7 +185,7 @@ public class BankHandlerTest {
         lossConnectBank = true;
         lossConnectDB = false;
         transferInfo = initTransferInfoWithStatusActionSubtransId(
-                TransactionInfoStatusEnum.COMPLETED, ActivityTypeEnum.ADD, UUID.randomUUID().toString());
+                TransactionInfoStatusEnum.COMPLETED, ActionTypeEnum.ADD, UUID.randomUUID().toString());
         bankHandler.revertTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
@@ -197,19 +194,18 @@ public class BankHandlerTest {
 
 
     private TransferInfo initTransferInfoWithStatusActionSubtransId(
-            TransactionInfoStatusEnum status, ActivityTypeEnum activityTypeEnum, String subTransId) {
+            TransactionInfoStatusEnum status, ActionTypeEnum actionTypeEnum, String subTransId) {
         return TransferInfo.builder()
                 .step(1)
                 .id(Snowflake.generateID())
                 .transId(transactionId)
-                .userId(userId)
                 .amount(amount)
                 .status(status)
                 .sourceType(ObjectTransactionEnum.BANK_ACCOUNT)
                 .sourceTransferId("BANK_VCB")
                 .userSourceId(userId)
-                .activityType(activityTypeEnum)
-                .subTransId(subTransId)
+                .actionType(actionTypeEnum)
+                .stepId(subTransId)
                 .createdTime(new Timestamp(System.currentTimeMillis()))
                 .updatedTime(new Timestamp(System.currentTimeMillis()))
                 .build();

@@ -1,7 +1,7 @@
 package com.zalopay.transfer.entity;
 
 import com.zalopay.transfer.constants.enums.ObjectTransactionEnum;
-import com.zalopay.transfer.constants.enums.ActivityTypeEnum;
+import com.zalopay.transfer.constants.enums.ActionTypeEnum;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +22,6 @@ public class TransferInfo {
     private String id;
     private String transId;
 
-    private String userId;
     private Long amount;
 
     @Enumerated(EnumType.STRING)
@@ -32,11 +31,10 @@ public class TransferInfo {
     private String sourceTransferId;
     private String userSourceId;
     @Enumerated(EnumType.STRING)
-    private ActivityTypeEnum activityType;
+    private ActionTypeEnum actionType;
 
     private Integer step;
-    @Column(name = "subtrans_id")
-    private String subTransId;
+    private String stepId;
 
     private Timestamp createdTime;
     private Timestamp updatedTime;

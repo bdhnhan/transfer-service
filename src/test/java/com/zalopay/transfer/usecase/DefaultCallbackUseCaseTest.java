@@ -4,8 +4,8 @@ import com.zalopay.transfer.constants.enums.*;
 import com.zalopay.transfer.controller.request.CallbackRequest;
 import com.zalopay.transfer.controller.response.CallbackResponse;
 import com.zalopay.transfer.controller.response.ResultResponse;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.handler.AbstractHandler;
 import com.zalopay.transfer.repository.TransferInfoRepository;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
@@ -48,7 +48,7 @@ public class DefaultCallbackUseCaseTest {
     private final String secondSubTransId = Snowflake.generateID();
 
     private final Long amount = 100_000L;
-    private TransferTransaction transferTransaction;
+    private Transaction transaction;
     private Map<String, TransferInfo> transferInfoMap = new HashMap<>();
 
 
@@ -75,29 +75,29 @@ public class DefaultCallbackUseCaseTest {
         }).when(transferInfoRepository).save(Mockito.any());
         Mockito.doAnswer(invocation -> {
             if (invocation.getArgument(0).equals(transactionId)) {
-                return Optional.of(transferTransaction);
+                return Optional.of(transaction);
             } else {
                 return Optional.empty();
             }
         }).when(transferTransactionRepository).findById(Mockito.anyString());
         Mockito.doAnswer(invocationOnMock ->
                         transferInfoMap.values().stream()
-                                .filter(transferInfo -> Objects.nonNull(transferInfo.getSubTransId()))
-                                .filter(transferInfo -> transferInfo.getSubTransId().equals(invocationOnMock.getArgument(0)))
+                                .filter(transferInfo -> Objects.nonNull(transferInfo.getStepId()))
+                                .filter(transferInfo -> transferInfo.getStepId().equals(invocationOnMock.getArgument(0)))
                                 .findFirst())
-                .when(transferInfoRepository).findBySubTransId(Mockito.anyString());
-        AtomicReference<TransferTransaction> transactionAtomicReference = new AtomicReference<>();
+                .when(transferInfoRepository).findByStepId(Mockito.anyString());
+        AtomicReference<Transaction> transactionAtomicReference = new AtomicReference<>();
         Mockito.doAnswer(invocationOnMock -> {
             transactionAtomicReference.set(invocationOnMock.getArgument(0));
-            transferTransaction = transactionAtomicReference.get();
+            transaction = transactionAtomicReference.get();
             return transactionAtomicReference.get();
         }).when(transferTransactionRepository).save(Mockito.any());
         Mockito.doAnswer(invocationOnMock ->
                         transferInfoMap.values().stream()
-                                .filter(transferInfo -> Objects.isNull(transferInfo.getSubTransId()))
+                                .filter(transferInfo -> Objects.isNull(transferInfo.getStepId()))
                                 .filter(transferInfo -> transferInfo.getTransId().equals(invocationOnMock.getArgument(0)))
                                 .findFirst())
-                .when(transferInfoRepository).findFirstByTransIdAndSubTransIdIsNullOrderByStepAsc(Mockito.anyString());
+                .when(transferInfoRepository).findFirstByTransIdAndStepIdIsNullOrderByStepAsc(Mockito.anyString());
 
         Mockito.doAnswer(invocationOnMock -> abstractHandler)
                 .when(applicationContext).getBean(Mockito.anyString());
@@ -107,7 +107,7 @@ public class DefaultCallbackUseCaseTest {
 
     @Test
     public void testCallbackFromOtherServiceSuccessShouldBeOk() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
         transferInfoMap = initStepTransaction(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -121,13 +121,13 @@ public class DefaultCallbackUseCaseTest {
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any());
         Assertions.assertEquals(200, response.getStatus());
         transferInfoMap.values().stream()
-                .filter(transferInfo -> Objects.nonNull(transferInfo.getSubTransId()) && transferInfo.getSubTransId().equals(firstSubTransId))
+                .filter(transferInfo -> Objects.nonNull(transferInfo.getStepId()) && transferInfo.getStepId().equals(firstSubTransId))
                 .forEach(transferInfo -> Assertions.assertEquals(TransactionInfoStatusEnum.COMPLETED, transferInfo.getStatus()));
     }
 
     @Test
     public void testCallbackFromOtherServiceWithSubTransIdNotFoundShouldBeOk() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
         transferInfoMap = initStepTransaction(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -144,7 +144,7 @@ public class DefaultCallbackUseCaseTest {
 
     @Test
     public void testCallbackFromOtherServiceWithSubTransIdIsFinalStepShouldBeOk() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
         transferInfoMap = initStepTransactionFinalStep(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -161,13 +161,13 @@ public class DefaultCallbackUseCaseTest {
         transferInfoMap.values().forEach(transferInfo ->
                 Assertions.assertEquals(TransactionInfoStatusEnum.COMPLETED, transferInfo.getStatus()));
 
-        Assertions.assertEquals(TransactionStatusEnum.COMPLETED, transferTransaction.getStatus());
+        Assertions.assertEquals(TransactionStatusEnum.COMPLETED, transaction.getStatus());
         Assertions.assertEquals(TransactionStatusEnum.COMPLETED.name(), redissonClient.getMapCache("transId").get(transactionId));
     }
 
     @Test
     public void testCallbackFromOtherServiceButFailedShouldBeOk() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.PROCESSING.name());
         transferInfoMap = initStepTransaction(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -182,13 +182,13 @@ public class DefaultCallbackUseCaseTest {
         Assertions.assertEquals(ErrorCode.SUCCESSFULLY.getCode(), response.getStatus());
 
         transferInfoMap.values().stream()
-                .filter(transferInfo -> Objects.nonNull(transferInfo.getSubTransId()) && transferInfo.getSubTransId().equals(firstSubTransId))
+                .filter(transferInfo -> Objects.nonNull(transferInfo.getStepId()) && transferInfo.getStepId().equals(firstSubTransId))
                 .forEach(transferInfo -> Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus()));
     }
 
     @Test
     public void testCallbackFromOtherServiceWithStepRevertingShouldBeOk() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.FAILED.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.FAILED.name());
         transferInfoMap = initStepTransactionRevertingCase(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -203,13 +203,13 @@ public class DefaultCallbackUseCaseTest {
         Assertions.assertEquals(ErrorCode.SUCCESSFULLY.getCode(), response.getStatus());
 
         transferInfoMap.values().stream()
-                .filter(transferInfo -> Objects.nonNull(transferInfo.getSubTransId()) && transferInfo.getSubTransId().equals(firstSubTransId))
+                .filter(transferInfo -> Objects.nonNull(transferInfo.getStepId()) && transferInfo.getStepId().equals(firstSubTransId))
                 .forEach(transferInfo -> Assertions.assertEquals(TransactionInfoStatusEnum.ROLLBACK, transferInfo.getStatus()));
     }
 
     @Test
     public void testCallbackFromOtherServiceWithStepRevertingButFailed() {
-        transferTransaction = initTransferTransaction(transactionId, TransactionStatusEnum.FAILED.name());
+        transaction = initTransferTransaction(transactionId, TransactionStatusEnum.FAILED.name());
         transferInfoMap = initStepTransactionRevertingCase(transactionId);
 
         CallbackRequest callbackRequest = CallbackRequest.builder()
@@ -224,17 +224,18 @@ public class DefaultCallbackUseCaseTest {
         Assertions.assertEquals(ErrorCode.SUCCESSFULLY.getCode(), response.getStatus());
 
         transferInfoMap.values().stream()
-                .filter(transferInfo -> Objects.nonNull(transferInfo.getSubTransId()) && transferInfo.getSubTransId().equals(firstSubTransId))
+                .filter(transferInfo -> Objects.nonNull(transferInfo.getStepId()) && transferInfo.getStepId().equals(firstSubTransId))
                 .forEach(transferInfo -> Assertions.assertEquals(TransactionInfoStatusEnum.REVERT_FAILED, transferInfo.getStatus()));
     }
 
-    private TransferTransaction initTransferTransaction(String transactionId, String status) {
-        return new TransferTransaction(
+    private Transaction initTransferTransaction(String transactionId, String status) {
+        return new Transaction(
                 transactionId,
                 TransactionStatusEnum.valueOf(status),
                 amount,
                 TransType.TOP_UP,
                 "",
+                UUID.randomUUID().toString(),
                 new Timestamp(System.currentTimeMillis() - 100_000L),
                 new Timestamp(System.currentTimeMillis()));
     }
@@ -250,14 +251,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(1)
                         .id(first)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.PROCESSING)
                         .sourceType(ObjectTransactionEnum.BANK_ACCOUNT)
                         .sourceTransferId("BANK_VCB")
                         .userSourceId(userId)
-                        .activityType(ActivityTypeEnum.DEDUCT)
-                        .subTransId(firstSubTransId)
+                        .actionType(ActionTypeEnum.DEDUCT)
+                        .stepId(firstSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -267,14 +267,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(2)
                         .id(second)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.INITIAL)
                         .sourceType(ObjectTransactionEnum.WALLET)
                         .userSourceId("ZLP_WALLET")
                         .sourceTransferId("0918340208")
-                        .activityType(ActivityTypeEnum.ADD)
-                        .subTransId(null)
+                        .actionType(ActionTypeEnum.ADD)
+                        .stepId(null)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -293,14 +292,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(1)
                         .id(first)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.COMPLETED)
                         .sourceType(ObjectTransactionEnum.BANK_ACCOUNT)
                         .sourceTransferId("BANK_VCB")
                         .userSourceId(userId)
-                        .activityType(ActivityTypeEnum.DEDUCT)
-                        .subTransId(firstSubTransId)
+                        .actionType(ActionTypeEnum.DEDUCT)
+                        .stepId(firstSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -310,14 +308,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(2)
                         .id(second)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.PROCESSING)
                         .sourceType(ObjectTransactionEnum.WALLET)
                         .userSourceId("ZLP_WALLET")
                         .sourceTransferId("0918340208")
-                        .activityType(ActivityTypeEnum.ADD)
-                        .subTransId(secondSubTransId)
+                        .actionType(ActionTypeEnum.ADD)
+                        .stepId(secondSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -336,14 +333,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(1)
                         .id(first)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.REVERTING)
                         .sourceType(ObjectTransactionEnum.BANK_ACCOUNT)
                         .sourceTransferId("BANK_VCB")
                         .userSourceId(userId)
-                        .activityType(ActivityTypeEnum.DEDUCT)
-                        .subTransId(firstSubTransId)
+                        .actionType(ActionTypeEnum.DEDUCT)
+                        .stepId(firstSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()
@@ -353,14 +349,13 @@ public class DefaultCallbackUseCaseTest {
                         .step(2)
                         .id(second)
                         .transId(transactionId)
-                        .userId(userId)
                         .amount(amount)
                         .status(TransactionInfoStatusEnum.FAILED)
                         .sourceType(ObjectTransactionEnum.WALLET)
                         .userSourceId("ZLP_WALLET")
                         .sourceTransferId("0918340208")
-                        .activityType(ActivityTypeEnum.ADD)
-                        .subTransId(secondSubTransId)
+                        .actionType(ActionTypeEnum.ADD)
+                        .stepId(secondSubTransId)
                         .createdTime(initTime)
                         .updatedTime(initTime)
                         .build()

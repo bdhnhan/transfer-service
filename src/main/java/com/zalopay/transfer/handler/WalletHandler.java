@@ -1,6 +1,6 @@
 package com.zalopay.transfer.handler;
 
-import com.zalopay.transfer.constants.enums.ActivityTypeEnum;
+import com.zalopay.transfer.constants.enums.ActionTypeEnum;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import com.zalopay.transfer.data.RevertTransferInfo;
 import com.zalopay.transfer.data.WalletTransferInfo;
@@ -33,7 +33,7 @@ public class WalletHandler implements AbstractHandler {
                     .transId(transferInfo.getTransId())
                     .amount(transferInfo.getAmount())
                     .build();
-            if (ActivityTypeEnum.ADD.equals(transferInfo.getActivityType())) {
+            if (ActionTypeEnum.ADD.equals(transferInfo.getActionType())) {
                 topUpTrans(transferInfo, walletTransferInfo);
             } else {
                 withdrawTrans(transferInfo, walletTransferInfo);
@@ -49,7 +49,7 @@ public class WalletHandler implements AbstractHandler {
         WalletTransferInfoResponse walletTransferInfoResponse = zaloWalletExternalService.addMoneyWallet(walletTransferInfo);
         if (walletTransferInfoResponse.getStatus().equals("PROCESSING")) {
             transferInfo.setStatus(TransactionInfoStatusEnum.PROCESSING);
-            transferInfo.setSubTransId(walletTransferInfoResponse.getSubTransId());
+            transferInfo.setStepId(walletTransferInfoResponse.getSubTransId());
         } else {
             transferInfo.setStatus(TransactionInfoStatusEnum.FAILED);
             applicationEventPublisher.publishEvent(new RollBackEvent(this, transferInfo.getTransId(), System.currentTimeMillis()));
@@ -61,7 +61,7 @@ public class WalletHandler implements AbstractHandler {
         WalletTransferInfoResponse walletTransferInfoResponse = zaloWalletExternalService.deductMoneyWallet(walletTransferInfo);
         if (walletTransferInfoResponse.getStatus().equals("PROCESSING")) {
             transferInfo.setStatus(TransactionInfoStatusEnum.PROCESSING);
-            transferInfo.setSubTransId(walletTransferInfoResponse.getSubTransId());
+            transferInfo.setStepId(walletTransferInfoResponse.getSubTransId());
         } else {
             transferInfo.setStatus(TransactionInfoStatusEnum.FAILED);
             applicationEventPublisher.publishEvent(new RollBackEvent(this, transferInfo.getTransId(), System.currentTimeMillis()));
@@ -70,7 +70,7 @@ public class WalletHandler implements AbstractHandler {
 
     @Override
     public void revertTransaction(TransferInfo transferInfo) {
-        RevertTransferInfo revertTransferInfo = RevertTransferInfo.builder().subTransId(transferInfo.getSubTransId()).build();
+        RevertTransferInfo revertTransferInfo = RevertTransferInfo.builder().subTransId(transferInfo.getStepId()).build();
         WalletTransferInfoResponse walletTransferInfoResponse = zaloWalletExternalService.revertTransaction(revertTransferInfo);
         if (walletTransferInfoResponse.getStatus().equals("PROCESSING")) {
             transferInfo.setStatus(TransactionInfoStatusEnum.REVERTING);

@@ -3,7 +3,7 @@ package com.zalopay.transfer.usecase;
 import com.zalopay.transfer.constants.enums.TransType;
 import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import com.zalopay.transfer.controller.response.ResultResponse;
-import com.zalopay.transfer.entity.TransferTransaction;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.repository.TransferTransactionRepository;
 import com.zalopay.transfer.utils.Snowflake;
 import org.junit.jupiter.api.Assertions;
@@ -20,6 +20,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.sql.Timestamp;
 import java.util.Optional;
+import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
 public class DefaultGetStatusTransactionUseCaseTest {
@@ -78,13 +79,14 @@ public class DefaultGetStatusTransactionUseCaseTest {
         Assertions.assertEquals(603, response.getStatus());
     }
 
-    private TransferTransaction initTransferTransaction(String transactionId) {
-        return new TransferTransaction(
+    private Transaction initTransferTransaction(String transactionId) {
+        return new Transaction(
                 transactionId,
                 transactionStatusEnum,
                 amount,
                 TransType.TOP_UP,
                 "",
+                UUID.randomUUID().toString(),
                 new Timestamp(System.currentTimeMillis() - 100_000L),
                 new Timestamp(System.currentTimeMillis()));
     }

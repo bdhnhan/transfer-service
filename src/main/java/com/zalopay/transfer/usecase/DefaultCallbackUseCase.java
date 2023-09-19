@@ -6,8 +6,8 @@ import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
 import com.zalopay.transfer.controller.request.CallbackRequest;
 import com.zalopay.transfer.controller.response.CallbackResponse;
 import com.zalopay.transfer.controller.response.ResultResponse;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.handler.AbstractHandler;
 import com.zalopay.transfer.listener.event.RollBackEvent;
 import com.zalopay.transfer.repository.TransferInfoRepository;
@@ -38,7 +38,7 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
     @Override
     @Transactional
     public ResultResponse<CallbackResponse> handle(CallbackRequest request) {
-        Optional<TransferInfo> transferInfoOpt = transferInfoRepo.findBySubTransId(request.getTransId());
+        Optional<TransferInfo> transferInfoOpt = transferInfoRepo.findByStepId(request.getTransId());
         if (transferInfoOpt.isPresent()) {
             transferInfoOpt.get().setUpdatedTime(new Timestamp(System.currentTimeMillis()));
             if (transferInfoOpt.get().getStatus().equals(TransactionInfoStatusEnum.REVERTING)) {
@@ -83,16 +83,16 @@ public class DefaultCallbackUseCase implements CallbackUseCase {
     @Transactional
     public void processNextStep(String transId) {
         Optional<TransferInfo> transferInfoOpt = transferInfoRepo
-                .findFirstByTransIdAndSubTransIdIsNullOrderByStepAsc(transId);
+                .findFirstByTransIdAndStepIdIsNullOrderByStepAsc(transId);
         transferInfoOpt.ifPresentOrElse(transferInfo -> {
             AbstractHandler classHandler = (AbstractHandler) applicationContext.getBean(transferInfo.getSourceType().name());
             classHandler.handleTransaction(transferInfo);
         }, () -> {
-            Optional<TransferTransaction> transferTransactionOptional = transferTransactionRepo.findById(transId);
+            Optional<Transaction> transferTransactionOptional = transferTransactionRepo.findById(transId);
             transferTransactionOptional.ifPresent(transferTransaction -> {
                 transferTransaction.setStatus(TransactionStatusEnum.COMPLETED);
                 transferTransactionRepo.save(transferTransaction);
-                redissonClient.getMapCache("transId").put(transferTransaction.getTransId(), TransactionStatusEnum.COMPLETED.name(),1, TimeUnit.MINUTES);
+                redissonClient.getMapCache("transId").put(transferTransaction.getId(), TransactionStatusEnum.COMPLETED.name(),1, TimeUnit.MINUTES);
             });
         });
     }

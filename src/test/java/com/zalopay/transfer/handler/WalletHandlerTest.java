@@ -1,6 +1,6 @@
 package com.zalopay.transfer.handler;
 
-import com.zalopay.transfer.constants.enums.ActivityTypeEnum;
+import com.zalopay.transfer.constants.enums.ActionTypeEnum;
 import com.zalopay.transfer.constants.enums.ObjectTransactionEnum;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import com.zalopay.transfer.data.WalletTransferInfoResponse;
@@ -92,65 +92,65 @@ public class WalletHandlerTest {
     public void TestTopUpTransferExpectExceptionShouldBeOk() {
         lossConnectWallet = true;
         expectCatchException = true;
-        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         walletHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(1)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestTopUpTransferShouldBeOk() {
         lossConnectWallet = false;
         expectCatchException = false;
-        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         walletHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.PROCESSING, transferInfo.getStatus());
-        Assertions.assertNotNull(transferInfo.getSubTransId());
+        Assertions.assertNotNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestTopUpTransferLossConnectWalletShouldBeOk() {
         lossConnectWallet = true;
         expectCatchException = false;
-        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.ADD, null);
+        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.ADD, null);
         walletHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(1)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestWithdrawTransferShouldBeOk() {
         lossConnectWallet = false;
         expectCatchException = false;
-        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.DEDUCT, null);
+        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.DEDUCT, null);
         walletHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(0)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.PROCESSING, transferInfo.getStatus());
-        Assertions.assertNotNull(transferInfo.getSubTransId());
+        Assertions.assertNotNull(transferInfo.getStepId());
     }
 
     @Test
     public void TestWithdrawTransferLossConnectWalletShouldBeOk() {
         lossConnectWallet = true;
         expectCatchException = false;
-        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActivityTypeEnum.DEDUCT, null);
+        transferInfo = initTransferInfoWithStatusActionSubTransId(TransactionInfoStatusEnum.INITIAL, ActionTypeEnum.DEDUCT, null);
         walletHandler.handleTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
         Mockito.verify(applicationEventPublisher, Mockito.times(1)).publishEvent(Mockito.any(RollBackEvent.class));
         Assertions.assertEquals(TransactionInfoStatusEnum.FAILED, transferInfo.getStatus());
-        Assertions.assertNull(transferInfo.getSubTransId());
+        Assertions.assertNull(transferInfo.getStepId());
     }
 
     @Test
@@ -158,7 +158,7 @@ public class WalletHandlerTest {
         lossConnectWallet = false;
         expectCatchException = false;
         transferInfo = initTransferInfoWithStatusActionSubTransId(
-                TransactionInfoStatusEnum.COMPLETED, ActivityTypeEnum.ADD, UUID.randomUUID().toString());
+                TransactionInfoStatusEnum.COMPLETED, ActionTypeEnum.ADD, UUID.randomUUID().toString());
         walletHandler.revertTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
@@ -170,7 +170,7 @@ public class WalletHandlerTest {
         lossConnectWallet = true;
         expectCatchException = false;
         transferInfo = initTransferInfoWithStatusActionSubTransId(
-                TransactionInfoStatusEnum.COMPLETED, ActivityTypeEnum.ADD, UUID.randomUUID().toString());
+                TransactionInfoStatusEnum.COMPLETED, ActionTypeEnum.ADD, UUID.randomUUID().toString());
         walletHandler.revertTransaction(transferInfo);
 
         Mockito.verify(transferInfoRepo, Mockito.times(1)).save(Mockito.any(TransferInfo.class));
@@ -179,19 +179,18 @@ public class WalletHandlerTest {
 
 
     private TransferInfo initTransferInfoWithStatusActionSubTransId(
-            TransactionInfoStatusEnum status, ActivityTypeEnum activityTypeEnum, String subTransId) {
+            TransactionInfoStatusEnum status, ActionTypeEnum actionTypeEnum, String subTransId) {
         return TransferInfo.builder()
                 .step(1)
                 .id(Snowflake.generateID())
                 .transId(transactionId)
-                .userId(userId)
                 .amount(amount)
                 .status(status)
                 .sourceType(ObjectTransactionEnum.WALLET)
                 .sourceTransferId("ZLP_WALLET")
                 .userSourceId("0918340208")
-                .activityType(activityTypeEnum)
-                .subTransId(subTransId)
+                .actionType(actionTypeEnum)
+                .stepId(subTransId)
                 .createdTime(new Timestamp(System.currentTimeMillis()))
                 .updatedTime(new Timestamp(System.currentTimeMillis()))
                 .build();

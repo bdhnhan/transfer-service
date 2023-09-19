@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface TransferInfoRepository extends CrudRepository<TransferInfo, String>, JpaRepository<TransferInfo, String> {
     Optional<TransferInfo> findByTransIdAndStep(String transId, Integer step);
-    Optional<TransferInfo> findBySubTransId(String subTransId);
-    Optional<TransferInfo> findFirstByTransIdAndSubTransIdIsNullOrderByStepAsc(String transId);
+    Optional<TransferInfo> findByStepId(String subTransId);
+    Optional<TransferInfo> findFirstByTransIdAndStepIdIsNullOrderByStepAsc(String transId);
     List<TransferInfo> findAllByTransId(String transId);
 }

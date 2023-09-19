@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.zalopay.transfer.constants.Constant;
 import com.zalopay.transfer.constants.enums.TransactionInfoStatusEnum;
 import com.zalopay.transfer.constants.enums.TransactionStatusEnum;
+import com.zalopay.transfer.entity.Transaction;
 import com.zalopay.transfer.entity.TransferInfo;
-import com.zalopay.transfer.entity.TransferTransaction;
 import com.zalopay.transfer.handler.AbstractHandler;
 import com.zalopay.transfer.listener.event.TransferEventData;
 import com.zalopay.transfer.repository.TransferInfoRepository;
@@ -41,16 +41,16 @@ public class RollBackRequestedConsumer {
         TransferEventData data = new Gson().fromJson(messageData, TransferEventData.class);
         log.info("Listen from topic roll-back-steps-topic with data :: {}", data.getTransactionId());
 
-        Optional<TransferTransaction> transferTransactionOptional = transferTransactionRepo.findById(data.getTransactionId());
+        Optional<Transaction> transferTransactionOptional = transferTransactionRepo.findById(data.getTransactionId());
 
         if (transferTransactionOptional.isPresent()) {
-            TransferTransaction transferTransaction = transferTransactionOptional.get();
-            transferTransaction.setStatus(TransactionStatusEnum.FAILED);
-            transferTransaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
-            transferTransactionRepo.save(transferTransaction);
+            Transaction transaction = transferTransactionOptional.get();
+            transaction.setStatus(TransactionStatusEnum.FAILED);
+            transaction.setUpdatedTime(new Timestamp(System.currentTimeMillis()));
+            transferTransactionRepo.save(transaction);
             redissonClient.getMapCache("transId")
                     .put(data.getTransactionId(), TransactionStatusEnum.FAILED.name(),1, TimeUnit.MINUTES);
-            rollbackSteps(transferTransaction.getTransId());
+            rollbackSteps(transaction.getId());
         }
     }
 

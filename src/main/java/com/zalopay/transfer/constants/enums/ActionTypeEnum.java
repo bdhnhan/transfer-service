@@ -1,6 +1,6 @@
 package com.zalopay.transfer.constants.enums;
 
-public enum ActivityTypeEnum {
+public enum ActionTypeEnum {
     ADD,
     DEDUCT
 }

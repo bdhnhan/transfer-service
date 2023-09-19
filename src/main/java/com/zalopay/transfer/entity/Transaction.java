@@ -14,15 +14,16 @@ import java.sql.Timestamp;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransferTransaction {
+public class Transaction {
     @Id
-    private String transId;
+    private String id;
     @Enumerated(EnumType.STRING)
     private TransactionStatusEnum status;
     private Long amount;
     @Enumerated(EnumType.STRING)
     private TransType transType;
     private String description = "";
+    private String userId;
     private Timestamp createdTime;
     private Timestamp updatedTime;
 }
