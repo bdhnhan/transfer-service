@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class WalletTransferInfo {
-    private String transId;
+    private String stepId;
     private String phoneNumber;
     private String userId;
     private Long amount;

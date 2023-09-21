@@ -38,7 +38,7 @@ public class BankHandler implements AbstractHandler {
             bankConnectOptional.ifPresent(bankConnect -> {
                 BankTransferInfo bankTransferInfo = BankTransferInfo.builder()
                         .numberAccount(bankConnect.getNumberAccount())
-                        .transId(transferInfo.getTransId())
+                        .stepId(transferInfo.getId())
                         .amount(transferInfo.getAmount())
                         .build();
                 if (ActionTypeEnum.ADD.equals(transferInfo.getActionType())) {

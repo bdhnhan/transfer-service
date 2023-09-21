@@ -24,6 +24,7 @@ public class BankExternalService {
                     Bank.AddMoneyBankRequest.newBuilder()
                             .setAmount(bankTransferInfo.getAmount())
                             .setNumberAcc(bankTransferInfo.getNumberAccount())
+                            .setKeySource(bankTransferInfo.getStepId())
                             .build()
             );
 
@@ -46,6 +47,7 @@ public class BankExternalService {
                     Bank.DeductMoneyBankRequest.newBuilder()
                             .setAmount(bankTransferInfo.getAmount())
                             .setNumberAcc(bankTransferInfo.getNumberAccount())
+                            .setKeySource(bankTransferInfo.getStepId())
                             .build()
             );
 

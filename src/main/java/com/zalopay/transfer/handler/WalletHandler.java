@@ -30,7 +30,7 @@ public class WalletHandler implements AbstractHandler {
         try {
             WalletTransferInfo walletTransferInfo = WalletTransferInfo.builder()
                     .phoneNumber(transferInfo.getUserSourceId())
-                    .transId(transferInfo.getTransId())
+                    .stepId(transferInfo.getId())
                     .amount(transferInfo.getAmount())
                     .build();
             if (ActionTypeEnum.ADD.equals(transferInfo.getActionType())) {

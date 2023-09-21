@@ -24,6 +24,7 @@ public class ZaloWalletExternalService {
                     Zalowallet.AddMoneyWalletRequest.newBuilder()
                             .setPhoneNumber(walletTransferInfo.getPhoneNumber())
                             .setAmount(walletTransferInfo.getAmount())
+                            .setKeySource(walletTransferInfo.getStepId())
                             .build()
             );
 
@@ -46,6 +47,7 @@ public class ZaloWalletExternalService {
                     Zalowallet.DeductMoneyWalletRequest.newBuilder()
                             .setAmount(walletTransferInfo.getAmount())
                             .setPhoneNumber(walletTransferInfo.getPhoneNumber())
+                            .setKeySource(walletTransferInfo.getStepId())
                             .build()
             );
 
